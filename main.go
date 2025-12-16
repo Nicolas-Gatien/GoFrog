@@ -1,6 +1,7 @@
 package main
 
 import (
+	"image"
 	"image/color"
 	"log"
 	"math"
@@ -9,8 +10,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-const GameWidth = 320
-const GameHeight = 240
+const GameWidth = 320 / 2
+const GameHeight = 240 / 2
 
 type Vector2 struct {
 	x float64
@@ -18,16 +19,29 @@ type Vector2 struct {
 }
 
 type Fly struct {
-	position Vector2
+	position        Vector2
+	animationFrames int
+	animationLength int
 }
 
 type Game struct {
 	FROG_IMAGE *ebiten.Image
 	FLY_IMAGE  *ebiten.Image
 	flies      []Fly
+	time       int
 }
 
 func (g *Game) Update() error {
+	g.time += 1
+	for i, fly := range g.flies {
+		if math.Mod(float64(g.time), 3.0) == 0 {
+			if fly.animationFrames+1 >= fly.animationLength {
+				g.flies[0].animationFrames = 0
+			} else {
+				g.flies[i].animationFrames += 1
+			}
+		}
+	}
 	return nil
 }
 
@@ -50,7 +64,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, fly := range g.flies {
 		opts := ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(fly.position.x, fly.position.y)
-		screen.DrawImage(g.FLY_IMAGE, &opts)
+		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.animationFrames*16, 0, (fly.animationFrames+1)*16, 16)).(*ebiten.Image), &opts)
 	}
 }
 
@@ -67,13 +81,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	flyImage, _, err := ebitenutil.NewImageFromFile("fly.png")
+	flyImage, _, err := ebitenutil.NewImageFromFile("fly_animation.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	flies := []Fly{
-		Fly{position: Vector2{30, 50}},
+		{position: Vector2{30, 50}, animationLength: 6},
 	}
 
 	if err := ebiten.RunGame(&Game{FROG_IMAGE: frogImage, FLY_IMAGE: flyImage, flies: flies}); err != nil {
