@@ -20,27 +20,44 @@ type Vector2 struct {
 
 type Fly struct {
 	position        Vector2
-	animationFrames int
+	currentFrame    int
 	animationLength int
 }
 
+type Frog struct {
+	open  bool
+	angle float64
+}
+
 type Game struct {
-	FROG_IMAGE *ebiten.Image
-	FLY_IMAGE  *ebiten.Image
-	flies      []Fly
-	time       int
+	FROG_IMAGE      *ebiten.Image
+	OPEN_FROG_IMAGE *ebiten.Image
+	FLY_IMAGE       *ebiten.Image
+	flies           []Fly
+	time            int
+	frog            Frog
 }
 
 func (g *Game) Update() error {
 	g.time += 1
 	for i, fly := range g.flies {
 		if math.Mod(float64(g.time), 3.0) == 0 {
-			if fly.animationFrames+1 >= fly.animationLength {
-				g.flies[0].animationFrames = 0
+			if fly.currentFrame+1 >= fly.animationLength {
+				g.flies[0].currentFrame = 0
 			} else {
-				g.flies[i].animationFrames += 1
+				g.flies[i].currentFrame += 1
 			}
 		}
+	}
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) {
+		g.frog.open = true
+	} else {
+		g.frog.open = false
+		cursorX, cursorY := ebiten.CursorPosition()
+		centerX := GameWidth / 2
+		centerY := GameHeight / 2
+		offset := 90 * (math.Pi / 180)
+		g.frog.angle = math.Atan2(float64(cursorY-centerY), float64(cursorX-centerX)) - offset
 	}
 	return nil
 }
@@ -49,22 +66,21 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	background := color.RGBA{103, 114, 169, 255}
 	screen.Fill(background)
 
-	cursorX, cursorY := ebiten.CursorPosition()
-	centerX := GameWidth / 2
-	centerY := GameHeight / 2
-
 	opts := ebiten.DrawImageOptions{}
-	offset := 90 * (math.Pi / 180)
-	angle := math.Atan2(float64(cursorY-centerY), float64(cursorX-centerX)) - offset
-	opts.GeoM.Rotate(angle)
-	opts.GeoM.Translate(float64(centerX)-(8.0*math.Cos(angle))+8.0*math.Sin(angle), float64(centerY)-(8.0*math.Cos(angle))-8.0*math.Sin(angle))
 
-	screen.DrawImage(g.FROG_IMAGE, &opts)
+	opts.GeoM.Rotate(g.frog.angle)
+	opts.GeoM.Translate(float64(GameWidth/2)-(8.0*math.Cos(g.frog.angle))+8.0*math.Sin(g.frog.angle), float64(GameHeight/2)-(8.0*math.Cos(g.frog.angle))-8.0*math.Sin(g.frog.angle))
+
+	if g.frog.open {
+		screen.DrawImage(g.OPEN_FROG_IMAGE, &opts)
+	} else {
+		screen.DrawImage(g.FROG_IMAGE, &opts)
+	}
 
 	for _, fly := range g.flies {
 		opts := ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(fly.position.x, fly.position.y)
-		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.animationFrames*16, 0, (fly.animationFrames+1)*16, 16)).(*ebiten.Image), &opts)
+		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
 }
 
@@ -75,8 +91,14 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func main() {
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Pond Frog")
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	frogImage, _, err := ebitenutil.NewImageFromFile("frog.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	openFrogImage, _, err := ebitenutil.NewImageFromFile("frog_open.png")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +112,7 @@ func main() {
 		{position: Vector2{30, 50}, animationLength: 6},
 	}
 
-	if err := ebiten.RunGame(&Game{FROG_IMAGE: frogImage, FLY_IMAGE: flyImage, flies: flies}); err != nil {
+	if err := ebiten.RunGame(&Game{FROG_IMAGE: frogImage, OPEN_FROG_IMAGE: openFrogImage, FLY_IMAGE: flyImage, flies: flies, frog: Frog{open: false}}); err != nil {
 		log.Fatal(err)
 	}
 }
