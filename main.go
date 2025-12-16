@@ -3,6 +3,7 @@ package main
 import (
 	"image/color"
 	"log"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -24,10 +25,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(background)
 
 	cursorX, cursorY := ebiten.CursorPosition()
-	ebitenutil.DebugPrintAt(screen, "Here", cursorX, cursorY)
+	frogX := GameWidth / 2
+	frogY := GameHeight / 2
 
 	opts := ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64((GameWidth/2.0)-(g.FROG_IMAGE.Bounds().Dx()/2.0)), float64((GameHeight/2.0)-(g.FROG_IMAGE.Bounds().Dy()/2.0)))
+	offset := 90 * (math.Pi / 180)
+	angle := math.Atan2(float64(cursorY-frogY), float64(cursorX-frogX)) - offset
+	opts.GeoM.Rotate(angle)
+	opts.GeoM.Translate(float64(frogX)-(8.0*math.Cos(angle))+8.0*math.Sin(angle), float64(frogY)-(8.0*math.Cos(angle))-8.0*math.Sin(angle))
+
 	screen.DrawImage(g.FROG_IMAGE, &opts)
 }
 
