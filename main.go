@@ -33,6 +33,7 @@ type Game struct {
 	FROG_IMAGE      *ebiten.Image
 	OPEN_FROG_IMAGE *ebiten.Image
 	FLY_IMAGE       *ebiten.Image
+	TONGUE_IMAGE    *ebiten.Image
 	flies           []Fly
 	time            int
 	frog            Frog
@@ -82,6 +83,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		opts.GeoM.Translate(fly.position.x, fly.position.y)
 		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
+
+	tongue := g.TONGUE_IMAGE
+	cursorX, cursorY := ebiten.CursorPosition()
+	distance := math.Sqrt(math.Pow(float64(cursorX)-GameWidth/2, 2) + math.Pow(float64(cursorY)-GameHeight/2, 2))
+	tongueOptions := ebiten.DrawImageOptions{}
+	tongueOptions.GeoM.Scale(1, distance)
+	tongueOptions.GeoM.Rotate(g.frog.angle)
+	tongueOptions.GeoM.Translate(float64(GameWidth/2)-(3.0*math.Cos(g.frog.angle))+3.0*math.Sin(g.frog.angle), float64(GameHeight/2)-(3.0*math.Cos(g.frog.angle))-3.0*math.Sin(g.frog.angle))
+
+	screen.DrawImage(tongue, &tongueOptions)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -108,11 +119,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	tongueImage, _, err := ebitenutil.NewImageFromFile("tongue.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	flies := []Fly{
 		{position: Vector2{30, 50}, animationLength: 6},
 	}
 
-	if err := ebiten.RunGame(&Game{FROG_IMAGE: frogImage, OPEN_FROG_IMAGE: openFrogImage, FLY_IMAGE: flyImage, flies: flies, frog: Frog{open: false}}); err != nil {
+	if err := ebiten.RunGame(&Game{TONGUE_IMAGE: tongueImage, FROG_IMAGE: frogImage, OPEN_FROG_IMAGE: openFrogImage, FLY_IMAGE: flyImage, flies: flies, frog: Frog{open: false}}); err != nil {
 		log.Fatal(err)
 	}
 }
