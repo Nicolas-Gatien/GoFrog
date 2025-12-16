@@ -74,6 +74,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	if g.frog.open {
 		screen.DrawImage(g.OPEN_FROG_IMAGE, &opts)
+		tongue := g.TONGUE_IMAGE
+		cursorX, cursorY := ebiten.CursorPosition()
+		distance := math.Sqrt(math.Pow(float64(cursorX)-GameWidth/2, 2) + math.Pow(float64(cursorY)-GameHeight/2, 2))
+		tongueOptions := ebiten.DrawImageOptions{}
+		tongueOptions.GeoM.Scale(1, distance)
+		tongueOptions.GeoM.Translate(0, 8.0)
+		tongueOptions.GeoM.Rotate(g.frog.angle)
+		tongueOptions.GeoM.Translate(float64(GameWidth/2)-(3.0*math.Cos(g.frog.angle))+3.0*math.Sin(g.frog.angle), float64(GameHeight/2)-(3.0*math.Cos(g.frog.angle))-3.0*math.Sin(g.frog.angle))
+		screen.DrawImage(tongue, &tongueOptions)
 	} else {
 		screen.DrawImage(g.FROG_IMAGE, &opts)
 	}
@@ -84,15 +93,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
 
-	tongue := g.TONGUE_IMAGE
-	cursorX, cursorY := ebiten.CursorPosition()
-	distance := math.Sqrt(math.Pow(float64(cursorX)-GameWidth/2, 2) + math.Pow(float64(cursorY)-GameHeight/2, 2))
-	tongueOptions := ebiten.DrawImageOptions{}
-	tongueOptions.GeoM.Scale(1, distance)
-	tongueOptions.GeoM.Rotate(g.frog.angle)
-	tongueOptions.GeoM.Translate(float64(GameWidth/2)-(3.0*math.Cos(g.frog.angle))+3.0*math.Sin(g.frog.angle), float64(GameHeight/2)-(3.0*math.Cos(g.frog.angle))-3.0*math.Sin(g.frog.angle))
-
-	screen.DrawImage(tongue, &tongueOptions)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
