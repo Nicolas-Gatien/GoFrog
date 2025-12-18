@@ -8,6 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 const GameWidth = 320 / 2
@@ -25,8 +26,10 @@ type Fly struct {
 }
 
 type Frog struct {
-	open  bool
-	angle float64
+	open               bool
+	angle              float64
+	tongueLength       float64
+	tongueTargetLength float64
 }
 
 type Game struct {
@@ -41,6 +44,8 @@ type Game struct {
 
 func (g *Game) Update() error {
 	g.time += 1
+	cursorX, cursorY := ebiten.CursorPosition()
+
 	for i, fly := range g.flies {
 		if math.Mod(float64(g.time), 3.0) == 0 {
 			if fly.currentFrame+1 >= fly.animationLength {
@@ -50,11 +55,18 @@ func (g *Game) Update() error {
 			}
 		}
 	}
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
+		g.frog.tongueTargetLength = math.Sqrt(math.Pow(float64(cursorX)-GameWidth/2, 2) + math.Pow(float64(cursorY)-GameHeight/2, 2))
+	}
+
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) {
 		g.frog.open = true
+		if g.frog.tongueLength < g.frog.tongueTargetLength {
+			g.frog.tongueLength += 5
+		}
 	} else {
+		g.frog.tongueLength = 0
 		g.frog.open = false
-		cursorX, cursorY := ebiten.CursorPosition()
 		centerX := GameWidth / 2
 		centerY := GameHeight / 2
 		offset := 90 * (math.Pi / 180)
@@ -75,10 +87,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.frog.open {
 		screen.DrawImage(g.OPEN_FROG_IMAGE, &opts)
 		tongue := g.TONGUE_IMAGE
-		cursorX, cursorY := ebiten.CursorPosition()
-		distance := math.Sqrt(math.Pow(float64(cursorX)-GameWidth/2, 2) + math.Pow(float64(cursorY)-GameHeight/2, 2))
 		tongueOptions := ebiten.DrawImageOptions{}
-		tongueOptions.GeoM.Scale(1, distance)
+		tongueOptions.GeoM.Scale(1, g.frog.tongueLength)
 		tongueOptions.GeoM.Translate(0, 8.0)
 		tongueOptions.GeoM.Rotate(g.frog.angle)
 		tongueOptions.GeoM.Translate(float64(GameWidth/2)-(3.0*math.Cos(g.frog.angle))+3.0*math.Sin(g.frog.angle), float64(GameHeight/2)-(3.0*math.Cos(g.frog.angle))-3.0*math.Sin(g.frog.angle))
