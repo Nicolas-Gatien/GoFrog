@@ -25,11 +25,16 @@ type Fly struct {
 	animationLength int
 }
 
+const IDLE = "searching"
+const ATTACKING = "attacking"
+const RETREATING = "retreating"
+
 type Frog struct {
 	open               bool
 	angle              float64
 	tongueLength       float64
 	tongueTargetLength float64
+	state              string
 }
 
 type Game struct {
@@ -55,22 +60,33 @@ func (g *Game) Update() error {
 			}
 		}
 	}
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
-		g.frog.tongueTargetLength = math.Sqrt(math.Pow(float64(cursorX)-GameWidth/2, 2) + math.Pow(float64(cursorY)-GameHeight/2, 2))
-	}
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) {
+	switch g.frog.state {
+	case ATTACKING:
 		g.frog.open = true
 		if g.frog.tongueLength < g.frog.tongueTargetLength {
 			g.frog.tongueLength += 5
+		} else {
+			g.frog.state = RETREATING
 		}
-	} else {
-		g.frog.tongueLength = 0
+	case RETREATING:
+		if g.frog.tongueLength > 0 {
+			g.frog.tongueLength -= 10
+		} else {
+			g.frog.state = IDLE
+			g.frog.tongueLength = 0
+		}
+	case IDLE:
 		g.frog.open = false
 		centerX := GameWidth / 2
 		centerY := GameHeight / 2
 		offset := 90 * (math.Pi / 180)
 		g.frog.angle = math.Atan2(float64(cursorY-centerY), float64(cursorX-centerX)) - offset
+
+		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
+			g.frog.state = ATTACKING
+			g.frog.tongueTargetLength = math.Sqrt(math.Pow(float64(cursorX)-GameWidth/2, 2) + math.Pow(float64(cursorY)-GameHeight/2, 2))
+		}
 	}
 	return nil
 }
@@ -138,7 +154,7 @@ func main() {
 		{position: Vector2{30, 50}, animationLength: 6},
 	}
 
-	if err := ebiten.RunGame(&Game{TONGUE_IMAGE: tongueImage, FROG_IMAGE: frogImage, OPEN_FROG_IMAGE: openFrogImage, FLY_IMAGE: flyImage, flies: flies, frog: Frog{open: false}}); err != nil {
+	if err := ebiten.RunGame(&Game{TONGUE_IMAGE: tongueImage, FROG_IMAGE: frogImage, OPEN_FROG_IMAGE: openFrogImage, FLY_IMAGE: flyImage, flies: flies, frog: Frog{open: false, state: IDLE}}); err != nil {
 		log.Fatal(err)
 	}
 }
