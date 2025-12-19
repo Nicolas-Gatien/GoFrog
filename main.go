@@ -51,12 +51,14 @@ func (g *Game) Update() error {
 	g.time += 1
 	cursorX, cursorY := ebiten.CursorPosition()
 
-	for i, fly := range g.flies {
+	for i := range g.flies {
+		fly := &g.flies[i]
+
 		if math.Mod(float64(g.time), 3.0) == 0 {
 			if fly.currentFrame+1 >= fly.animationLength {
-				g.flies[0].currentFrame = 0
+				fly.currentFrame = 0
 			} else {
-				g.flies[i].currentFrame += 1
+				fly.currentFrame += 1
 			}
 		}
 	}
