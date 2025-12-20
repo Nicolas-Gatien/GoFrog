@@ -5,6 +5,8 @@ import (
 	"image/color"
 	"log"
 	"math"
+	"math/rand"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -23,11 +25,16 @@ type Fly struct {
 	position        Vector2
 	currentFrame    int
 	animationLength int
+	lifetime        int
 }
 
 const IDLE = "searching"
 const ATTACKING = "attacking"
 const RETREATING = "retreating"
+
+func CenterScreen() Vector2 {
+	return Vector2{x: GameWidth / 2, y: GameHeight / 2}
+}
 
 type Frog struct {
 	open               bool
@@ -47,12 +54,29 @@ type Game struct {
 	frog            Frog
 }
 
+func Distance(pos1 Vector2, pos2 Vector2) float64 {
+	return math.Sqrt(math.Pow(pos2.x-pos1.x, 2) + math.Pow(pos2.y-pos1.y, 2))
+}
+
+func MoveFly(fly *Fly) {
+	//move := (math.Sin() * 2) + 1
+	fly.position.y += math.Sin(float64(fly.lifetime/10)) / 2
+}
+
 func (g *Game) Update() error {
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	g.time += 1
 	cursorX, cursorY := ebiten.CursorPosition()
 
+	if math.Mod(float64(g.time), 60) == 0 {
+		g.flies = append(g.flies, Fly{position: Vector2{x: random.Float64() * GameWidth, y: random.Float64() * GameHeight}, animationLength: 6})
+	}
+
 	for i := range g.flies {
 		fly := &g.flies[i]
+		fly.lifetime += 1
+
+		MoveFly(fly)
 
 		if math.Mod(float64(g.time), 3.0) == 0 {
 			if fly.currentFrame+1 >= fly.animationLength {
@@ -87,7 +111,7 @@ func (g *Game) Update() error {
 
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 			g.frog.state = ATTACKING
-			g.frog.tongueTargetLength = math.Sqrt(math.Pow(float64(cursorX)-GameWidth/2, 2) + math.Pow(float64(cursorY)-GameHeight/2, 2))
+			g.frog.tongueTargetLength = Distance(Vector2{x: GameWidth / 2, y: GameHeight / 2}, Vector2{x: float64(cursorX), y: float64(cursorY)})
 		}
 	}
 	return nil
