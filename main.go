@@ -89,6 +89,7 @@ type Game struct {
 	audioContext    *audio.Context
 	audioChomp      *audio.Player
 	audioCatch      *audio.Player
+	shakeTime       float64
 }
 
 func Distance(pos1 Vector2, pos2 Vector2) float64 {
@@ -183,9 +184,9 @@ func (g *Game) Update() error {
 	for i := range killFlyIndex {
 		g.flies[killFlyIndex[i]] = g.flies[len(g.flies)-1]
 		g.flies = g.flies[:len(g.flies)-1]
-		g.audioCatch.Pause()
 		g.audioChomp.Rewind()
 		g.audioChomp.Play()
+		g.shakeTime = 0
 	}
 
 	switch g.frog.state {
@@ -220,7 +221,24 @@ func (g *Game) Update() error {
 	return nil
 }
 
+func Lerp(x, y, a float64) float64 {
+	return x*(1-a) + y*a
+}
+
+func ShakeScreen(screen *ebiten.Image, screenBuffer *ebiten.Image, t float64) {
+	maxAmplitude := 3.0
+	opts := ebiten.DrawImageOptions{}
+	if t < 1 {
+		amplitude := maxAmplitude * Lerp(1, 0, t)
+		dx := amplitude * (2*rand.Float64() - 1)
+		dy := amplitude * (2*rand.Float64() - 1)
+		opts.GeoM.Translate(dx, dy)
+	}
+	screen.DrawImage(screenBuffer, &opts)
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
+	screenBuffer := ebiten.NewImageFromImage(screen)
 	background := color.RGBA{103, 114, 169, 255}
 	screen.Fill(background)
 
@@ -230,31 +248,34 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	opts.GeoM.Translate(float64(GameWidth/2)-(8.0*math.Cos(g.frog.angle))+8.0*math.Sin(g.frog.angle), float64(GameHeight/2)-(8.0*math.Cos(g.frog.angle))-8.0*math.Sin(g.frog.angle))
 
 	if g.frog.open {
-		screen.DrawImage(g.OPEN_FROG_IMAGE, &opts)
+		screenBuffer.DrawImage(g.OPEN_FROG_IMAGE, &opts)
 		tongue := g.TONGUE_IMAGE
 		tongueOptions := ebiten.DrawImageOptions{}
 		tongueOptions.GeoM.Scale(1, g.frog.tongueLength)
 		tongueOptions.GeoM.Translate(0, 8.0)
 		tongueOptions.GeoM.Rotate(g.frog.angle)
 		tongueOptions.GeoM.Translate(float64(GameWidth/2)-(3.0*math.Cos(g.frog.angle))+3.0*math.Sin(g.frog.angle), float64(GameHeight/2)-(3.0*math.Cos(g.frog.angle))-3.0*math.Sin(g.frog.angle))
-		screen.DrawImage(tongue, &tongueOptions)
+		screenBuffer.DrawImage(tongue, &tongueOptions)
 	} else {
-		screen.DrawImage(g.FROG_IMAGE, &opts)
+		screenBuffer.DrawImage(g.FROG_IMAGE, &opts)
 	}
 
 	for _, fly := range g.flies {
 		opts := ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(fly.position.x, fly.position.y)
 		opts.GeoM.Translate(-8, -8)
-		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
+		screenBuffer.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
 
 	for _, effect := range g.catchEffects {
 		opts := ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(effect.position.x, effect.position.y)
 		opts.GeoM.Translate(-8, -8)
-		screen.DrawImage(g.CATCH_IMAGE.SubImage(image.Rect(effect.currentFrame*16, 0, (effect.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
+		screenBuffer.DrawImage(g.CATCH_IMAGE.SubImage(image.Rect(effect.currentFrame*16, 0, (effect.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
+
+	g.shakeTime += 1.0 / 30
+	ShakeScreen(screen, screenBuffer, g.shakeTime)
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(g.frog.health))
 
@@ -276,6 +297,7 @@ func (game *Game) Reset() {
 	game.time = 0
 	game.frog = Frog{open: false, state: IDLE, health: 3}
 	game.catchEffects = []CatchEffect{}
+	game.shakeTime = 1
 
 	game.audioContext = audio.NewContext(48000)
 	game.audioChomp = CreatePlayerForSoundFile("assets/sounds/chomp.wav", game.audioContext)
