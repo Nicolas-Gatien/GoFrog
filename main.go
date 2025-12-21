@@ -105,13 +105,14 @@ func (g *Game) Update() error {
 	for i := range g.flies {
 		fly := &g.flies[i]
 
-		if fly.state == HIT {
+		switch fly.state {
+		case HIT:
 			if Distance(fly.position, CenterScreen()) < 5 {
 				killFlyIndex = append(killFlyIndex, i)
 				continue
 			}
 			fly.position = g.frog.tonguePosition()
-		} else if fly.state == ATTACKING {
+		case ATTACKING:
 			if g.frog.state == ATTACKING && Distance(fly.position, g.frog.tonguePosition()) < 8 {
 				fly.state = HIT
 				g.frog.state = RETREATING
@@ -133,6 +134,7 @@ func (g *Game) Update() error {
 				}
 			}
 		}
+
 		fly.lifetime += 1
 	}
 
@@ -168,11 +170,7 @@ func (g *Game) Update() error {
 	}
 
 	if g.frog.health < 1 {
-		flies := []Fly{
-			{position: Vector2{30, 50}, animationLength: 6, state: ATTACKING},
-		}
-		g.flies = flies
-		g.frog = Frog{open: false, state: IDLE, health: 3}
+		g.Reset()
 	}
 	return nil
 }
@@ -219,6 +217,12 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return GameWidth, GameHeight
 }
 
+func (game *Game) Reset() {
+	game.flies = []Fly{}
+	game.time = 0
+	game.frog = Frog{open: false, state: IDLE, health: 3}
+}
+
 func main() {
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Pond Frog")
@@ -244,11 +248,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	flies := []Fly{
-		{position: Vector2{30, 50}, animationLength: 6, state: ATTACKING},
+	game := Game{
+		TONGUE_IMAGE:    tongueImage,
+		FROG_IMAGE:      frogImage,
+		OPEN_FROG_IMAGE: openFrogImage,
+		FLY_IMAGE:       flyImage,
 	}
+	game.Reset()
 
-	if err := ebiten.RunGame(&Game{TONGUE_IMAGE: tongueImage, FROG_IMAGE: frogImage, OPEN_FROG_IMAGE: openFrogImage, FLY_IMAGE: flyImage, flies: flies, frog: Frog{open: false, state: IDLE, health: 3}}); err != nil {
+	if err := ebiten.RunGame(&game); err != nil {
 		log.Fatal(err)
 	}
 }
