@@ -87,7 +87,8 @@ type Game struct {
 	time            int
 	frog            Frog
 	audioContext    *audio.Context
-	audioPlayer     *audio.Player
+	audioChomp      *audio.Player
+	audioCatch      *audio.Player
 }
 
 func Distance(pos1 Vector2, pos2 Vector2) float64 {
@@ -155,6 +156,8 @@ func (g *Game) Update() error {
 				fly.state = HIT
 				g.frog.state = RETREATING
 				g.catchEffects = append(g.catchEffects, NewCatchEffect(fly.position))
+				g.audioCatch.Rewind()
+				g.audioCatch.Play()
 				continue
 			}
 			if Distance(CenterScreen(), fly.position) < 5 {
@@ -180,8 +183,9 @@ func (g *Game) Update() error {
 	for i := range killFlyIndex {
 		g.flies[killFlyIndex[i]] = g.flies[len(g.flies)-1]
 		g.flies = g.flies[:len(g.flies)-1]
-		g.audioPlayer.Rewind()
-		g.audioPlayer.Play()
+		g.audioCatch.Pause()
+		g.audioChomp.Rewind()
+		g.audioChomp.Play()
 	}
 
 	switch g.frog.state {
@@ -267,14 +271,19 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func (game *Game) Reset() {
 	game.flies = []Fly{
-		{position: Vector2{x: 50, y: 50}, animationLength: 6, currentFrame: 0, state: ATTACKING},
+		{position: Vector2{x: 10, y: 10}, animationLength: 6, currentFrame: 0, state: ATTACKING},
 	}
 	game.time = 0
 	game.frog = Frog{open: false, state: IDLE, health: 3}
 	game.catchEffects = []CatchEffect{}
 
 	game.audioContext = audio.NewContext(48000)
-	file, err := os.Open("assets/sounds/chomp.wav")
+	game.audioChomp = CreatePlayerForSoundFile("assets/sounds/chomp.wav", game.audioContext)
+	game.audioCatch = CreatePlayerForSoundFile("assets/sounds/catch.wav", game.audioContext)
+}
+
+func CreatePlayerForSoundFile(path string, context *audio.Context) *audio.Player {
+	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -284,10 +293,11 @@ func (game *Game) Reset() {
 		log.Fatal(err)
 	}
 
-	game.audioPlayer, err = game.audioContext.NewPlayerF32(d)
+	player, err := context.NewPlayerF32(d)
 	if err != nil {
 		log.Fatal(err)
 	}
+	return player
 }
 
 func main() {
