@@ -21,6 +21,10 @@ type Vector2 struct {
 	y float64
 }
 
+func Euler(angle float64, magnitude float64) Vector2 {
+	return Vector2{x: math.Cos(angle) * magnitude, y: math.Sin(angle) * magnitude}
+}
+
 type Fly struct {
 	position        Vector2
 	currentFrame    int
@@ -67,7 +71,7 @@ func MoveFly(fly *Fly) {
 	fly.position.y += sway
 
 	angle := GetAngleTo(CenterScreen(), fly.position)
-	movement := Vector2{x: math.Cos(angle), y: math.Sin(angle)}
+	movement := Euler(angle, 1)
 
 	fly.position.x += movement.x * 0.2
 	fly.position.y += movement.y * 0.2
@@ -79,7 +83,11 @@ func (g *Game) Update() error {
 	cursorX, cursorY := ebiten.CursorPosition()
 
 	if math.Mod(float64(g.time), 60) == 0 {
-		g.flies = append(g.flies, Fly{position: Vector2{x: random.Float64() * GameWidth, y: random.Float64() * GameHeight}, animationLength: 6})
+		spawnAngle := (random.Float64() * 360) * (math.Pi / 180)
+		spawnMagnitude := Euler(spawnAngle, (GameWidth/2)+64)
+		spawnPosition := Vector2{CenterScreen().x + spawnMagnitude.x, CenterScreen().y + spawnMagnitude.y}
+
+		g.flies = append(g.flies, Fly{position: spawnPosition, animationLength: 6})
 	}
 
 	for i := range g.flies {
