@@ -6,10 +6,13 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/wav"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
@@ -83,6 +86,8 @@ type Game struct {
 	catchEffects    []CatchEffect
 	time            int
 	frog            Frog
+	audioContext    *audio.Context
+	audioPlayer     *audio.Player
 }
 
 func Distance(pos1 Vector2, pos2 Vector2) float64 {
@@ -175,6 +180,8 @@ func (g *Game) Update() error {
 	for i := range killFlyIndex {
 		g.flies[killFlyIndex[i]] = g.flies[len(g.flies)-1]
 		g.flies = g.flies[:len(g.flies)-1]
+		g.audioPlayer.Rewind()
+		g.audioPlayer.Play()
 	}
 
 	switch g.frog.state {
@@ -259,10 +266,28 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func (game *Game) Reset() {
-	game.flies = []Fly{}
+	game.flies = []Fly{
+		{position: Vector2{x: 50, y: 50}, animationLength: 6, currentFrame: 0, state: ATTACKING},
+	}
 	game.time = 0
 	game.frog = Frog{open: false, state: IDLE, health: 3}
 	game.catchEffects = []CatchEffect{}
+
+	game.audioContext = audio.NewContext(48000)
+	file, err := os.Open("assets/sounds/chomp.wav")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	d, err := wav.DecodeF32(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	game.audioPlayer, err = game.audioContext.NewPlayerF32(d)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
