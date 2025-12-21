@@ -247,11 +247,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(g.frog.health))
 
-	debug := ebiten.NewImage(1, 1)
+	/*debug := ebiten.NewImage(1, 1)
 	debug.Fill(color.RGBA{255, 0, 0, 255})
 	debugOpts := ebiten.DrawImageOptions{}
 	debugOpts.GeoM.Translate(g.frog.tonguePosition().x, g.frog.tonguePosition().y)
-	screen.DrawImage(debug, &debugOpts)
+	screen.DrawImage(debug, &debugOpts)*/
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -270,27 +270,27 @@ func main() {
 	ebiten.SetWindowTitle("Pond Frog")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	frogImage, _, err := ebitenutil.NewImageFromFile("frog.png")
+	frogImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/frog.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	openFrogImage, _, err := ebitenutil.NewImageFromFile("frog_open.png")
+	openFrogImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/frog_open.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	flyImage, _, err := ebitenutil.NewImageFromFile("fly_animation.png")
+	flyImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/fly_animation.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	tongueImage, _, err := ebitenutil.NewImageFromFile("tongue.png")
+	tongueImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/tongue.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	catchImage, _, err := ebitenutil.NewImageFromFile("catch_effect.png")
+	catchImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/catch_effect.png")
 	if err != nil {
 		log.Fatal(err)
 	}
