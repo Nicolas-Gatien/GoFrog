@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -30,11 +31,13 @@ type Fly struct {
 	currentFrame    int
 	animationLength int
 	lifetime        int
+	state           string
 }
 
 const IDLE = "searching"
 const ATTACKING = "attacking"
 const RETREATING = "retreating"
+const HIT = "hit"
 
 func CenterScreen() Vector2 {
 	return Vector2{x: GameWidth / 2, y: GameHeight / 2}
@@ -46,6 +49,7 @@ type Frog struct {
 	tongueLength       float64
 	tongueTargetLength float64
 	state              string
+	health             int
 }
 
 func (frog Frog) tonguePosition() Vector2 {
@@ -89,41 +93,47 @@ func (g *Game) Update() error {
 	g.time += 1
 	cursorX, cursorY := ebiten.CursorPosition()
 
-	if math.Mod(float64(g.time), 10) == 0 {
+	if math.Mod(float64(g.time), 60) == 0 {
 		spawnAngle := (random.Float64() * 360) * (math.Pi / 180)
 		spawnMagnitude := Euler(spawnAngle, (GameWidth/2)+64)
 		spawnPosition := Vector2{CenterScreen().x + spawnMagnitude.x, CenterScreen().y + spawnMagnitude.y}
 
-		g.flies = append(g.flies, Fly{position: spawnPosition, animationLength: 6})
+		g.flies = append(g.flies, Fly{position: spawnPosition, animationLength: 6, state: ATTACKING})
 	}
 
 	killFlyIndex := []int{}
 	for i := range g.flies {
 		fly := &g.flies[i]
-		fly.lifetime += 1
 
-		if Distance(fly.position, CenterScreen()) < 5 {
-			killFlyIndex = append(killFlyIndex, i)
-			continue
-		}
-
-		if Distance(fly.position, g.frog.tonguePosition()) < 11 {
+		if fly.state == HIT {
+			if Distance(fly.position, CenterScreen()) < 5 {
+				killFlyIndex = append(killFlyIndex, i)
+				continue
+			}
 			fly.position = g.frog.tonguePosition()
-			if g.frog.state == ATTACKING {
+		} else if fly.state == ATTACKING {
+			if g.frog.state == ATTACKING && Distance(fly.position, g.frog.tonguePosition()) < 8 {
+				fly.state = HIT
 				g.frog.state = RETREATING
+				continue
 			}
-			continue
-		}
+			if Distance(CenterScreen(), fly.position) < 5 {
+				g.frog.health -= 1
+				killFlyIndex = append(killFlyIndex, i)
+				continue
+			}
 
-		MoveFly(fly)
+			MoveFly(fly)
 
-		if math.Mod(float64(g.time), 3.0) == 0 {
-			if fly.currentFrame+1 >= fly.animationLength {
-				fly.currentFrame = 0
-			} else {
-				fly.currentFrame += 1
+			if math.Mod(float64(g.time), 3.0) == 0 {
+				if fly.currentFrame+1 >= fly.animationLength {
+					fly.currentFrame = 0
+				} else {
+					fly.currentFrame += 1
+				}
 			}
 		}
+		fly.lifetime += 1
 	}
 
 	for i := range killFlyIndex {
@@ -156,6 +166,14 @@ func (g *Game) Update() error {
 			g.frog.tongueTargetLength = Distance(Vector2{x: GameWidth / 2, y: GameHeight / 2}, Vector2{x: float64(cursorX), y: float64(cursorY)})
 		}
 	}
+
+	if g.frog.health < 1 {
+		flies := []Fly{
+			{position: Vector2{30, 50}, animationLength: 6, state: ATTACKING},
+		}
+		g.flies = flies
+		g.frog = Frog{open: false, state: IDLE, health: 3}
+	}
 	return nil
 }
 
@@ -187,6 +205,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		opts.GeoM.Translate(-8, -8)
 		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
+
+	ebitenutil.DebugPrint(screen, strconv.Itoa(g.frog.health))
 
 	debug := ebiten.NewImage(1, 1)
 	debug.Fill(color.RGBA{255, 0, 0, 255})
@@ -225,10 +245,10 @@ func main() {
 	}
 
 	flies := []Fly{
-		{position: Vector2{30, 50}, animationLength: 6},
+		{position: Vector2{30, 50}, animationLength: 6, state: ATTACKING},
 	}
 
-	if err := ebiten.RunGame(&Game{TONGUE_IMAGE: tongueImage, FROG_IMAGE: frogImage, OPEN_FROG_IMAGE: openFrogImage, FLY_IMAGE: flyImage, flies: flies, frog: Frog{open: false, state: IDLE}}); err != nil {
+	if err := ebiten.RunGame(&Game{TONGUE_IMAGE: tongueImage, FROG_IMAGE: frogImage, OPEN_FROG_IMAGE: openFrogImage, FLY_IMAGE: flyImage, flies: flies, frog: Frog{open: false, state: IDLE, health: 3}}); err != nil {
 		log.Fatal(err)
 	}
 }
