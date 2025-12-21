@@ -48,6 +48,13 @@ type Frog struct {
 	state              string
 }
 
+func (frog Frog) tonguePosition() Vector2 {
+	magnitude := Euler(frog.angle+(90*(math.Pi/180)), frog.tongueLength)
+	center := CenterScreen()
+	position := Vector2{center.x + magnitude.x, center.y + magnitude.y}
+	return position
+}
+
 type Game struct {
 	FROG_IMAGE      *ebiten.Image
 	OPEN_FROG_IMAGE *ebiten.Image
@@ -82,7 +89,7 @@ func (g *Game) Update() error {
 	g.time += 1
 	cursorX, cursorY := ebiten.CursorPosition()
 
-	if math.Mod(float64(g.time), 60) == 0 {
+	if math.Mod(float64(g.time), 10) == 0 {
 		spawnAngle := (random.Float64() * 360) * (math.Pi / 180)
 		spawnMagnitude := Euler(spawnAngle, (GameWidth/2)+64)
 		spawnPosition := Vector2{CenterScreen().x + spawnMagnitude.x, CenterScreen().y + spawnMagnitude.y}
@@ -90,9 +97,23 @@ func (g *Game) Update() error {
 		g.flies = append(g.flies, Fly{position: spawnPosition, animationLength: 6})
 	}
 
+	killFlyIndex := []int{}
 	for i := range g.flies {
 		fly := &g.flies[i]
 		fly.lifetime += 1
+
+		if Distance(fly.position, CenterScreen()) < 5 {
+			killFlyIndex = append(killFlyIndex, i)
+			continue
+		}
+
+		if Distance(fly.position, g.frog.tonguePosition()) < 11 {
+			fly.position = g.frog.tonguePosition()
+			if g.frog.state == ATTACKING {
+				g.frog.state = RETREATING
+			}
+			continue
+		}
 
 		MoveFly(fly)
 
@@ -103,6 +124,11 @@ func (g *Game) Update() error {
 				fly.currentFrame += 1
 			}
 		}
+	}
+
+	for i := range killFlyIndex {
+		g.flies[killFlyIndex[i]] = g.flies[len(g.flies)-1]
+		g.flies = g.flies[:len(g.flies)-1]
 	}
 
 	switch g.frog.state {
@@ -162,6 +188,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
 
+	debug := ebiten.NewImage(1, 1)
+	debug.Fill(color.RGBA{255, 0, 0, 255})
+	debugOpts := ebiten.DrawImageOptions{}
+	debugOpts.GeoM.Translate(g.frog.tonguePosition().x, g.frog.tonguePosition().y)
+	screen.DrawImage(debug, &debugOpts)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
