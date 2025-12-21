@@ -26,6 +26,20 @@ func Euler(angle float64, magnitude float64) Vector2 {
 	return Vector2{x: math.Cos(angle) * magnitude, y: math.Sin(angle) * magnitude}
 }
 
+type CatchEffect struct {
+	position        Vector2
+	currentFrame    int
+	animationLength int
+}
+
+func NewCatchEffect(position Vector2) CatchEffect {
+	return CatchEffect{
+		position:        position,
+		currentFrame:    0,
+		animationLength: 4,
+	}
+}
+
 type Fly struct {
 	position        Vector2
 	currentFrame    int
@@ -52,7 +66,7 @@ type Frog struct {
 	health             int
 }
 
-func (frog Frog) tonguePosition() Vector2 {
+func (frog *Frog) tonguePosition() Vector2 {
 	magnitude := Euler(frog.angle+(90*(math.Pi/180)), frog.tongueLength)
 	center := CenterScreen()
 	position := Vector2{center.x + magnitude.x, center.y + magnitude.y}
@@ -64,7 +78,9 @@ type Game struct {
 	OPEN_FROG_IMAGE *ebiten.Image
 	FLY_IMAGE       *ebiten.Image
 	TONGUE_IMAGE    *ebiten.Image
+	CATCH_IMAGE     *ebiten.Image
 	flies           []Fly
+	catchEffects    []CatchEffect
 	time            int
 	frog            Frog
 }
@@ -101,6 +117,23 @@ func (g *Game) Update() error {
 		g.flies = append(g.flies, Fly{position: spawnPosition, animationLength: 6, state: ATTACKING})
 	}
 
+	killEffectIndex := []int{}
+	for i := range g.catchEffects {
+		effect := &g.catchEffects[i]
+		if math.Mod(float64(g.time), 3.0) == 0 {
+			if effect.currentFrame+1 < effect.animationLength {
+				effect.currentFrame += 1
+			} else {
+				killEffectIndex = append(killEffectIndex, i)
+			}
+		}
+	}
+
+	for i := range killEffectIndex {
+		g.catchEffects[killEffectIndex[i]] = g.catchEffects[len(g.catchEffects)-1]
+		g.catchEffects = g.catchEffects[:len(g.catchEffects)-1]
+	}
+
 	killFlyIndex := []int{}
 	for i := range g.flies {
 		fly := &g.flies[i]
@@ -116,6 +149,7 @@ func (g *Game) Update() error {
 			if g.frog.state == ATTACKING && Distance(fly.position, g.frog.tonguePosition()) < 8 {
 				fly.state = HIT
 				g.frog.state = RETREATING
+				g.catchEffects = append(g.catchEffects, NewCatchEffect(fly.position))
 				continue
 			}
 			if Distance(CenterScreen(), fly.position) < 5 {
@@ -204,6 +238,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
 
+	for _, effect := range g.catchEffects {
+		opts := ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(effect.position.x, effect.position.y)
+		opts.GeoM.Translate(-8, -8)
+		screen.DrawImage(g.CATCH_IMAGE.SubImage(image.Rect(effect.currentFrame*16, 0, (effect.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
+	}
+
 	ebitenutil.DebugPrint(screen, strconv.Itoa(g.frog.health))
 
 	debug := ebiten.NewImage(1, 1)
@@ -221,6 +262,7 @@ func (game *Game) Reset() {
 	game.flies = []Fly{}
 	game.time = 0
 	game.frog = Frog{open: false, state: IDLE, health: 3}
+	game.catchEffects = []CatchEffect{}
 }
 
 func main() {
@@ -248,11 +290,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	catchImage, _, err := ebitenutil.NewImageFromFile("catch_effect.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	game := Game{
 		TONGUE_IMAGE:    tongueImage,
 		FROG_IMAGE:      frogImage,
 		OPEN_FROG_IMAGE: openFrogImage,
 		FLY_IMAGE:       flyImage,
+		CATCH_IMAGE:     catchImage,
 	}
 	game.Reset()
 
