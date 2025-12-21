@@ -58,9 +58,19 @@ func Distance(pos1 Vector2, pos2 Vector2) float64 {
 	return math.Sqrt(math.Pow(pos2.x-pos1.x, 2) + math.Pow(pos2.y-pos1.y, 2))
 }
 
+func GetAngleTo(target Vector2, self Vector2) float64 {
+	return math.Atan2(float64(target.y-self.y), float64(target.x-self.x))
+}
+
 func MoveFly(fly *Fly) {
-	//move := (math.Sin() * 2) + 1
-	fly.position.y += math.Sin(float64(fly.lifetime/10)) / 2
+	sway := math.Sin(float64(fly.lifetime/10)) / 2
+	fly.position.y += sway
+
+	angle := GetAngleTo(CenterScreen(), fly.position)
+	movement := Vector2{x: math.Cos(angle), y: math.Sin(angle)}
+
+	fly.position.x += movement.x * 0.2
+	fly.position.y += movement.y * 0.2
 }
 
 func (g *Game) Update() error {
@@ -104,10 +114,8 @@ func (g *Game) Update() error {
 		}
 	case IDLE:
 		g.frog.open = false
-		centerX := GameWidth / 2
-		centerY := GameHeight / 2
 		offset := 90 * (math.Pi / 180)
-		g.frog.angle = math.Atan2(float64(cursorY-centerY), float64(cursorX-centerX)) - offset
+		g.frog.angle = GetAngleTo(Vector2{x: float64(cursorX), y: float64(cursorY)}, CenterScreen()) - offset
 
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 			g.frog.state = ATTACKING
@@ -142,6 +150,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, fly := range g.flies {
 		opts := ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(fly.position.x, fly.position.y)
+		opts.GeoM.Translate(-8, -8)
 		screen.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
 	}
 
