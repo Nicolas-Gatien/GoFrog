@@ -1,0 +1,14 @@
+Upgrades
+- Faster Attack
+- Faster Retreat
+- Thicker Tongue
+- Quicker Days [x]
+
+Downgrades
+- More Flies
+- Faster Flies
+- Wavier Flies
+- Add Bees
+- Faster Bees
+- More Bees
+- Longer Days [x]

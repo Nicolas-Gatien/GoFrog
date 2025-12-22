@@ -1,6 +1,8 @@
 - [x] Add Screen Shake
-- [ ] Add Scoring
 - [x] Add Sound Effect to Eating
 - [x] Add Catch Effect
 - [ ] Make Rotating Frog Sprites
-- [ ] Think of how to add variety
+- [ ] Check if Audio Context Exists before attempting to make a new one
+- [ ] Implement Day System
+- [ ] Add Bees which dash in a straight line
+- [ ] Add Enemy Which swims in a circle
