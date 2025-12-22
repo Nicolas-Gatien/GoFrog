@@ -4,5 +4,8 @@
 - [ ] Make Rotating Frog Sprites
 - [ ] Check if Audio Context Exists before attempting to make a new one
 - [ ] Implement Day System
+    - [ ] Display Time Left using Actual Font
+    - [ ] Pause Game
+    - [ ] Display Upgrades
 - [ ] Add Bees which dash in a straight line
 - [ ] Add Enemy Which swims in a circle

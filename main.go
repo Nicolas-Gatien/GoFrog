@@ -7,7 +7,6 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -55,9 +54,18 @@ const IDLE = "searching"
 const ATTACKING = "attacking"
 const RETREATING = "retreating"
 const HIT = "hit"
+const PLAYING = "playing"
+const UPGRADING = "upgrading"
 
 func CenterScreen() Vector2 {
 	return Vector2{x: GameWidth / 2, y: GameHeight / 2}
+}
+
+type Upgrade struct {
+	upgrade     bool
+	description string
+	name        string
+	sprite      *ebiten.Image
 }
 
 type Frog struct {
@@ -77,19 +85,25 @@ func (frog *Frog) tonguePosition() Vector2 {
 }
 
 type Game struct {
-	FROG_IMAGE      *ebiten.Image
-	OPEN_FROG_IMAGE *ebiten.Image
-	FLY_IMAGE       *ebiten.Image
-	TONGUE_IMAGE    *ebiten.Image
-	CATCH_IMAGE     *ebiten.Image
-	flies           []Fly
-	catchEffects    []CatchEffect
-	time            int
-	frog            Frog
-	audioContext    *audio.Context
-	audioChomp      *audio.Player
-	audioCatch      *audio.Player
-	shakeTime       float64
+	FROG_IMAGE                 *ebiten.Image
+	OPEN_FROG_IMAGE            *ebiten.Image
+	FLY_IMAGE                  *ebiten.Image
+	TONGUE_IMAGE               *ebiten.Image
+	CATCH_IMAGE                *ebiten.Image
+	CARD_IMAGE                 *ebiten.Image
+	CONFUSED_FLY_UPGRADE_IMAGE *ebiten.Image
+	FASTER_FLY_UPGRADE_IMAGE   *ebiten.Image
+	MORE_FLY_UPGRADE_IMAGE     *ebiten.Image
+	state                      string
+	flies                      []Fly
+	catchEffects               []CatchEffect
+	upgrades                   []Upgrade
+	time                       int
+	frog                       Frog
+	audioContext               *audio.Context
+	audioChomp                 *audio.Player
+	audioCatch                 *audio.Player
+	shakeTime                  float64
 }
 
 func Distance(pos1 Vector2, pos2 Vector2) float64 {
@@ -113,6 +127,12 @@ func MoveFly(fly *Fly) {
 
 func (g *Game) Update() error {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	secondsLeft := 30 - (g.time / 60)
+	if secondsLeft < 1 {
+		g.state = UPGRADING
+		return nil
+	}
+
 	g.time += 1
 	cursorX, cursorY := ebiten.CursorPosition()
 
@@ -290,7 +310,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	ShakeScreen(screen, screenBuffer, g.shakeTime)
 
-	ebitenutil.DebugPrint(screen, strconv.Itoa(g.frog.health))
+	/*secondsLeft := 3 - (g.time / 60)
+	//ebitenutil.DebugPrint(screen, strconv.Itoa(g.frog.health))
+	ebitenutil.DebugPrint(screen, strconv.Itoa(int(secondsLeft)))
+
+	if secondsLeft < 1 {
+		numOfCards := 3
+		for i := 0; i < numOfCards; i++ {
+			cardOpts := ebiten.DrawImageOptions{}
+			startingOffset := float64((numOfCards-1)/2.0) * 36
+			cardOpts.GeoM.Translate(CenterScreen().x-12-startingOffset+float64(i*36.0), CenterScreen().y-16)
+			screen.DrawImage(g.CARD_IMAGE, &cardOpts)
+		}
+	}*/
+
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -305,6 +338,14 @@ func (game *Game) Reset() {
 	game.frog = Frog{open: false, state: IDLE, health: 3}
 	game.catchEffects = []CatchEffect{}
 	game.shakeTime = 1
+	game.state = PLAYING
+	game.upgrades = []Upgrade{
+		{name: "Confused Flies", upgrade: false},
+		{name: "Faster Flies", upgrade: false},
+		{name: "More Flies", upgrade: false},
+		{name: "Fast Attack", upgrade: true},
+		{name: "Fast Retreat", upgrade: true},
+	}
 
 	game.audioContext = audio.NewContext(48000)
 	game.audioChomp = CreatePlayerForSoundFile("assets/sounds/chomp.wav", game.audioContext)
@@ -359,12 +400,36 @@ func main() {
 		log.Fatal(err)
 	}
 
+	cardImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/blank_card.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	confusedFlyUpgradeImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/upgrades/confused_flies.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fasterFlyUpgradeImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/upgrades/faster_flies.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	moreFlyUpgradeImage, _, err := ebitenutil.NewImageFromFile("assets/sprites/upgrades/faster_flies.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	game := Game{
-		TONGUE_IMAGE:    tongueImage,
-		FROG_IMAGE:      frogImage,
-		OPEN_FROG_IMAGE: openFrogImage,
-		FLY_IMAGE:       flyImage,
-		CATCH_IMAGE:     catchImage,
+		TONGUE_IMAGE:               tongueImage,
+		FROG_IMAGE:                 frogImage,
+		OPEN_FROG_IMAGE:            openFrogImage,
+		FLY_IMAGE:                  flyImage,
+		CATCH_IMAGE:                catchImage,
+		CARD_IMAGE:                 cardImage,
+		CONFUSED_FLY_UPGRADE_IMAGE: confusedFlyUpgradeImage,
+		FASTER_FLY_UPGRADE_IMAGE:   fasterFlyUpgradeImage,
+		MORE_FLY_UPGRADE_IMAGE:     moreFlyUpgradeImage,
 	}
 	game.Reset()
 
