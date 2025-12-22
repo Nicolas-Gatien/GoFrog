@@ -17,8 +17,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
-const GameWidth = 320 / 2
-const GameHeight = 240 / 2
+const GameWidth = (320 / 2) * 1.5
+const GameHeight = (240 / 2) * 1.5
 
 type Vector2 struct {
 	x float64
@@ -264,7 +264,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		opts := ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(fly.position.x, fly.position.y)
 		opts.GeoM.Translate(-8, -8)
-		screenBuffer.DrawImage(g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image), &opts)
+		flySprite := g.FLY_IMAGE.SubImage(image.Rect(fly.currentFrame*16, 0, (fly.currentFrame+1)*16, 16)).(*ebiten.Image)
+
+		if fly.state == ATTACKING {
+			flyShadow := ebiten.NewImageFromImage(flySprite)
+			flyShadowOpts := ebiten.DrawImageOptions{}
+			flyShadowOpts.GeoM.Translate(fly.position.x, fly.position.y)
+			flyShadowOpts.GeoM.Translate(-8, -8)
+			flyShadowOpts.GeoM.Translate(0, 16)
+			flyShadowOpts.ColorScale.Scale(0, 0, 0, 0.1)
+			screenBuffer.DrawImage(flyShadow, &flyShadowOpts)
+		}
+
+		screenBuffer.DrawImage(flySprite, &opts)
 	}
 
 	for _, effect := range g.catchEffects {
@@ -275,15 +287,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	g.shakeTime += 1.0 / 30
+
 	ShakeScreen(screen, screenBuffer, g.shakeTime)
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(g.frog.health))
-
-	/*debug := ebiten.NewImage(1, 1)
-	debug.Fill(color.RGBA{255, 0, 0, 255})
-	debugOpts := ebiten.DrawImageOptions{}
-	debugOpts.GeoM.Translate(g.frog.tonguePosition().x, g.frog.tonguePosition().y)
-	screen.DrawImage(debug, &debugOpts)*/
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
